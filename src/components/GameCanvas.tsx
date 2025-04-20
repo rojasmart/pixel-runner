@@ -10,6 +10,14 @@ import jumpSprite1 from "../../public/assets/characters/bunny/adventurer-jump-01
 import jumpSprite2 from "../../public/assets/characters/bunny/adventurer-jump-02.png";
 import jumpSprite3 from "../../public/assets/characters/bunny/adventurer-jump-03.png";
 
+// ...existing imports...
+import attackSprite0 from "../../public/assets/characters/bunny/adventurer-attack3-00.png";
+import attackSprite1 from "../../public/assets/characters/bunny/adventurer-attack3-01.png";
+import attackSprite2 from "../../public/assets/characters/bunny/adventurer-attack3-02.png";
+import attackSprite3 from "../../public/assets/characters/bunny/adventurer-attack3-03.png";
+import attackSprite4 from "../../public/assets/characters/bunny/adventurer-attack3-04.png";
+import attackSprite5 from "../../public/assets/characters/bunny/adventurer-attack3-05.png";
+
 interface Layer {
   image: HTMLImageElement;
   x: number;
@@ -19,6 +27,7 @@ interface Layer {
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const bunnyImage = useRef<HTMLImageElement | null>(null);
+  const attackImages = useRef<HTMLImageElement[]>([]);
   const jumpImages = useRef<HTMLImageElement[]>([]);
   const layersRef = useRef<Layer[]>([]);
 
@@ -30,6 +39,12 @@ const GameCanvas = () => {
     initialY: 0,
     jumpHeight: 150,
     jumpSpeed: 8,
+  });
+
+  const attackState = useRef({
+    isAttacking: false,
+    attackFrame: 0,
+    attackDuration: 300, // Adjust timing as needed
   });
 
   useEffect(() => {
@@ -58,6 +73,15 @@ const GameCanvas = () => {
 
     jumpState.current.jumpY = bunnyY;
     jumpState.current.initialY = bunnyY;
+
+    // Load attack sprites
+    const attackSprites = [attackSprite0, attackSprite1, attackSprite2, attackSprite3, attackSprite4, attackSprite5];
+
+    attackImages.current = attackSprites.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
 
     // Load background layers
     const backgroundLayers = [
@@ -93,6 +117,11 @@ const GameCanvas = () => {
         jumpState.current.isJumping = true;
         jumpState.current.jumpFrame = 0;
         jumpState.current.initialY = jumpState.current.jumpY;
+      }
+
+      if (e.code === "KeyW" && !attackState.current.isAttacking) {
+        attackState.current.isAttacking = true;
+        attackState.current.attackFrame = 0;
       }
     };
 
@@ -136,8 +165,35 @@ const GameCanvas = () => {
         frameTimer = 0;
       }
 
+      // Draw character
+      if (attackState.current.isAttacking) {
+        // Calculate attack animation frame
+        const attackProgress = Math.min(attackState.current.attackFrame / 18, 1);
+        const attackIndex = Math.min(Math.floor(attackProgress * 6), 5);
+
+        if (attackImages.current[attackIndex]?.complete) {
+          ctx.drawImage(
+            attackImages.current[attackIndex],
+            0,
+            0,
+            FRAME_WIDTH,
+            FRAME_HEIGHT,
+            bunnyX,
+            jumpState.current.jumpY,
+            FRAME_WIDTH * 2,
+            FRAME_HEIGHT * 2
+          );
+        }
+
+        attackState.current.attackFrame += 1;
+
+        // End attack when animation is complete
+        if (attackProgress >= 1) {
+          attackState.current.isAttacking = false;
+        }
+      }
       // Draw bunny with jumping or running animation
-      if (jumpState.current.isJumping) {
+      else if (jumpState.current.isJumping) {
         // Calculate jump height using sine wave for smooth up/down motion
         const jumpProgress = Math.min(jumpState.current.jumpFrame / 30, 1);
         const jumpCurve = Math.sin(jumpProgress * Math.PI);
