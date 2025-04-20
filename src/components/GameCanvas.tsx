@@ -37,6 +37,8 @@ const GameCanvas = () => {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
+    ctx.imageSmoothingEnabled = false;
+
     // Canvas setup
     const width = canvas.width;
     const height = canvas.height;
