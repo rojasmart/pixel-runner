@@ -111,7 +111,7 @@ const GameCanvas = () => {
       ctx.clearRect(0, 0, width, height);
 
       // Draw background layers
-      layersRef.current.forEach((layer) => {
+      layersRef.current.slice(0, 3).forEach((layer) => {
         if (layer.image.complete) {
           // Move the layer
           layer.x -= layer.speed;
@@ -180,6 +180,22 @@ const GameCanvas = () => {
           );
         }
       }
+      // Draw foreground layers 4-5
+      layersRef.current.slice(3).forEach((layer) => {
+        if (layer.image.complete) {
+          // Move the layer
+          layer.x -= layer.speed;
+
+          // Reset position when image goes off screen
+          if (layer.x <= -width) {
+            layer.x = 0;
+          }
+
+          // Draw two copies of the image for seamless scrolling
+          ctx.drawImage(layer.image, layer.x, 0, width, height);
+          ctx.drawImage(layer.image, layer.x + width, 0, width, height);
+        }
+      });
 
       animationFrameId = requestAnimationFrame(draw);
     };
