@@ -31,6 +31,14 @@ const GameCanvas = () => {
   const jumpImages = useRef<HTMLImageElement[]>([]);
   const layersRef = useRef<Layer[]>([]);
 
+  // Add movement state
+  const movementState = useRef({
+    movingLeft: false,
+    movingRight: false,
+    speed: 5,
+    positionX: 100, // Initial X position
+  });
+
   // Add jump state variables
   const jumpState = useRef({
     isJumping: false,
@@ -135,6 +143,41 @@ const GameCanvas = () => {
     let lastTime = performance.now();
     let animationFrameId: number;
 
+    // Handle keyboard input
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !jumpState.current.isJumping) {
+        jumpState.current.isJumping = true;
+        jumpState.current.jumpFrame = 0;
+        jumpState.current.initialY = jumpState.current.jumpY;
+      }
+
+      if (e.code === "KeyW" && !attackState.current.isAttacking) {
+        attackState.current.isAttacking = true;
+        attackState.current.attackFrame = 0;
+      }
+
+      // Handle movement keys
+      if (e.code === "KeyA") {
+        movementState.current.movingLeft = true;
+      }
+      if (e.code === "KeyD") {
+        movementState.current.movingRight = true;
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Stop movement when keys are released
+      if (e.code === "KeyA") {
+        movementState.current.movingLeft = false;
+      }
+      if (e.code === "KeyD") {
+        movementState.current.movingRight = false;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
     const draw = (time: number) => {
       const deltaTime = time - lastTime;
       lastTime = time;
@@ -157,6 +200,22 @@ const GameCanvas = () => {
           ctx.drawImage(layer.image, layer.x + width, 0, width, height);
         }
       });
+
+      // Update bunny position based on movement state
+      if (movementState.current.movingLeft) {
+        movementState.current.positionX -= movementState.current.speed;
+        // Prevent moving off left edge
+        if (movementState.current.positionX < 0) {
+          movementState.current.positionX = 0;
+        }
+      }
+      if (movementState.current.movingRight) {
+        movementState.current.positionX += movementState.current.speed;
+        // Prevent moving off right edge
+        if (movementState.current.positionX > width - FRAME_WIDTH * 2) {
+          movementState.current.positionX = width - FRAME_WIDTH * 2;
+        }
+      }
 
       // Update bunny animation
       frameTimer += deltaTime;
@@ -208,7 +267,7 @@ const GameCanvas = () => {
             0,
             FRAME_WIDTH,
             FRAME_HEIGHT,
-            bunnyX,
+            movementState.current.positionX, // Use dynamic X position
             jumpState.current.jumpY,
             FRAME_WIDTH * 2,
             FRAME_HEIGHT * 2
@@ -231,7 +290,7 @@ const GameCanvas = () => {
             0,
             FRAME_WIDTH,
             FRAME_HEIGHT,
-            bunnyX,
+            movementState.current.positionX, // Use dynamic X position
             jumpState.current.jumpY,
             FRAME_WIDTH * 2,
             FRAME_HEIGHT * 2
@@ -261,7 +320,8 @@ const GameCanvas = () => {
     animationFrameId = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("keydown", handleKeyPress);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
