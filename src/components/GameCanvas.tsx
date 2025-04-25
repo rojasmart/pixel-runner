@@ -20,6 +20,7 @@ import attackSprite5 from "../../public/assets/characters/bunny/adventurer-attac
 
 //Enemy sprites
 import batSprite from "../../public/assets/characters/bat/Bat-IdleFly.png";
+import batDieSprite from "../../public/assets/characters/bat/Bat-Die.png";
 
 interface Layer {
   image: HTMLImageElement;
@@ -37,6 +38,8 @@ interface Bat {
   height: number;
   waveFactor: number; // Adicionar fator de ondulação para movimento vertical
   waveOffset: number; // Offset inicial para movimento ondulado
+  isDying: boolean; // Flag para indicar se está morrendo
+  deathFrame: number; // Frame atual da animação de morte
 }
 
 const GameCanvas = () => {
@@ -49,6 +52,7 @@ const GameCanvas = () => {
   // Add bat sprites and enemies references
   const batImages = useRef<HTMLImageElement[]>([]);
   const batEnemies = useRef<Bat[]>([]);
+  const batDieImage = useRef<HTMLImageElement | null>(null); // Referência para sprite de morte
   const lastBatSpawnTime = useRef<number>(0);
 
   // Add movement state
@@ -203,6 +207,11 @@ const GameCanvas = () => {
     batImg.src = batSprite;
     batImages.current = [batImg]; // Store the bat sprite image
 
+    // Load bat death sprite
+    const batDieImg = new Image();
+    batDieImg.src = batDieSprite;
+    batDieImage.current = batDieImg;
+
     // Initialize bat enemies array
     batEnemies.current = [];
 
@@ -215,8 +224,13 @@ const GameCanvas = () => {
     const BAT_DISPLAY_HEIGHT = 90; // Increased display height
     const BAT_SPAWN_INTERVAL = 3000; // Spawn a new bat every 3 seconds
 
+    // Configuração da animação de morte do morcego
+    const BAT_DIE_FRAMES = 5; // Número de frames na sprite de morte
+    const BAT_DIE_FRAME_DURATION = 120; // Duração de cada frame de morte
+
     // Track bat animation timing separately from bunny animation
     let batFrameTimer = 0;
+    let batDieFrameTimer = 0;
 
     const draw = (time: number) => {
       const deltaTime = time - lastTime;
@@ -291,6 +305,28 @@ const GameCanvas = () => {
           attackState.current.isAttacking = false;
         }
       }
+      if (attackState.current.isAttacking) {
+        // Área de ataque (à frente do personagem)
+        const attackAreaX = movementState.current.positionX + FRAME_WIDTH;
+        const attackAreaWidth = FRAME_WIDTH * 2;
+        const attackAreaY = jumpState.current.jumpY;
+        const attackAreaHeight = FRAME_HEIGHT * 2;
+
+        // Verificar colisão com morcegos
+        batEnemies.current.forEach((bat) => {
+          if (
+            !bat.isDying && // Verificar apenas morcegos vivos
+            bat.x < attackAreaX + attackAreaWidth &&
+            bat.x + BAT_DISPLAY_WIDTH > attackAreaX &&
+            bat.y < attackAreaY + attackAreaHeight &&
+            bat.y + BAT_DISPLAY_HEIGHT > attackAreaY
+          ) {
+            // Colisão detectada, iniciar animação de morte
+            bat.isDying = true;
+            bat.deathFrame = 0;
+          }
+        });
+      }
       // Draw bunny with jumping or running animation
       else if (jumpState.current.isJumping) {
         // Calculate jump height using sine wave for smooth up/down motion
@@ -356,6 +392,7 @@ const GameCanvas = () => {
       }
       // Update bat animation timer separately
       batFrameTimer += deltaTime;
+      batDieFrameTimer += deltaTime;
 
       // Update and draw bats
       batEnemies.current = batEnemies.current.filter((bat) => {
@@ -401,6 +438,77 @@ const GameCanvas = () => {
         return false; // Remove bat if it's off-screen
       });
 
+      batEnemies.current = batEnemies.current.filter((bat) => {
+        // Morcegos morrendo têm velocidade reduzida
+        if (!bat.isDying) {
+          bat.x -= bat.speed;
+
+          // Calcular movimento vertical ondulado para morcegos vivos
+          const waveHeight = 8;
+          const waveFrequency = 0.01;
+          const verticalOffset = Math.sin(bat.x * waveFrequency + bat.waveOffset) * waveHeight * bat.waveFactor;
+
+          // Update animation frame for living bats
+          if (batFrameTimer > BAT_FRAME_DURATION) {
+            bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
+          }
+
+          // Draw living bat
+          if (bat.x > -BAT_DISPLAY_WIDTH) {
+            if (batImages.current[0]?.complete) {
+              // Draw the bat with the correct frame
+              ctx.save();
+
+              const currentFrame = bat.frameIndex % BAT_FRAMES;
+
+              ctx.drawImage(
+                batImages.current[0],
+                currentFrame * BAT_FRAME_WIDTH,
+                0,
+                BAT_FRAME_WIDTH,
+                BAT_FRAME_HEIGHT,
+                bat.x,
+                bat.y + verticalOffset,
+                BAT_DISPLAY_WIDTH,
+                BAT_DISPLAY_HEIGHT
+              );
+
+              ctx.restore();
+            }
+            return true;
+          }
+          return false;
+        } else {
+          // Animação de morte
+          if (batDieFrameTimer > BAT_DIE_FRAME_DURATION) {
+            bat.deathFrame++;
+          }
+
+          // Desenhar animação de morte
+          if (bat.deathFrame < BAT_DIE_FRAMES) {
+            if (batDieImage.current?.complete) {
+              ctx.save();
+
+              ctx.drawImage(
+                batDieImage.current,
+                bat.deathFrame * BAT_FRAME_WIDTH,
+                0,
+                BAT_FRAME_WIDTH,
+                BAT_FRAME_HEIGHT,
+                bat.x,
+                bat.y,
+                BAT_DISPLAY_WIDTH,
+                BAT_DISPLAY_HEIGHT
+              );
+
+              ctx.restore();
+            }
+            return true; // Manter o morcego na lista até terminar a animação
+          }
+          return false; // Remover o morcego após animação de morte concluída
+        }
+      });
+
       // Reset bat animation timer after updating all bats
       if (batFrameTimer > BAT_FRAME_DURATION) {
         batFrameTimer = 0; // Reset the timer
@@ -408,6 +516,27 @@ const GameCanvas = () => {
         batEnemies.current.forEach((bat) => {
           bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
         });
+      }
+
+      if (batDieFrameTimer > BAT_DIE_FRAME_DURATION) {
+        batDieFrameTimer = 0;
+      }
+
+      if (time - lastBatSpawnTime.current > BAT_SPAWN_INTERVAL) {
+        const bat: Bat = {
+          x: width,
+          y: Math.random() * (height / 2) + 50,
+          frameIndex: 0,
+          speed: 3 + Math.random() * 2,
+          width: BAT_FRAME_WIDTH,
+          height: BAT_FRAME_HEIGHT,
+          waveFactor: Math.random() * 0.5 + 0.5,
+          waveOffset: Math.random() * Math.PI * 2,
+          isDying: false, // Inicialmente não está morrendo
+          deathFrame: 0, // Frame inicial da animação de morte
+        };
+        batEnemies.current.push(bat);
+        lastBatSpawnTime.current = time;
       }
 
       // Draw foreground layers 4-5
