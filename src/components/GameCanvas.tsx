@@ -237,7 +237,7 @@ const GameCanvas = () => {
             0,
             FRAME_WIDTH,
             FRAME_HEIGHT,
-            bunnyX,
+            movementState.current.positionX, // Changed from bunnyX to dynamic position
             jumpState.current.jumpY,
             FRAME_WIDTH * 2,
             FRAME_HEIGHT * 2
