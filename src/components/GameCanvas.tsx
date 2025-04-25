@@ -35,6 +35,8 @@ interface Bat {
   speed: number;
   width: number;
   height: number;
+  waveFactor: number; // Adicionar fator de ondulação para movimento vertical
+  waveOffset: number; // Offset inicial para movimento ondulado
 }
 
 const GameCanvas = () => {
@@ -205,12 +207,12 @@ const GameCanvas = () => {
     batEnemies.current = [];
 
     // Bat configuration
-    const BAT_FRAME_WIDTH = 32; // Width of each frame in the sprite sheet
-    const BAT_FRAME_HEIGHT = 32; // Height of each frame
-    const BAT_FRAMES = 8; // Number of animation frames in the sprite sheet
-    const BAT_FRAME_DURATION = 80; // Faster animation for bat wings
-    const BAT_DISPLAY_WIDTH = 96; // Increased display size
-    const BAT_DISPLAY_HEIGHT = 96; // Increased display height
+    const BAT_FRAME_WIDTH = 62; // Width of each frame in the sprite sheet
+    const BAT_FRAME_HEIGHT = 62; // Height of each frame
+    const BAT_FRAMES = 7; // Number of animation frames in the sprite sheet
+    const BAT_FRAME_DURATION = 100; // Faster animation for bat wings
+    const BAT_DISPLAY_WIDTH = 90; // Increased display size
+    const BAT_DISPLAY_HEIGHT = 90; // Increased display height
     const BAT_SPAWN_INTERVAL = 3000; // Spawn a new bat every 3 seconds
 
     // Track bat animation timing separately from bunny animation
@@ -346,6 +348,8 @@ const GameCanvas = () => {
           speed: 3 + Math.random() * 2, // Random speed between 3-5
           width: BAT_FRAME_WIDTH,
           height: BAT_FRAME_HEIGHT,
+          waveFactor: Math.random() * 0.5 + 0.5, // Fator de ondulação entre 0.5 e 1
+          waveOffset: Math.random() * Math.PI * 2, // Offset aleatório para variar movimento
         };
         batEnemies.current.push(bat);
         lastBatSpawnTime.current = time;
@@ -358,6 +362,11 @@ const GameCanvas = () => {
         // Update bat position
         bat.x -= bat.speed;
 
+        // Calcular movimento vertical ondulado
+        const waveHeight = 8; // Altura máxima da onda (pixels)
+        const waveFrequency = 0.01; // Frequência da oscilação
+        const verticalOffset = Math.sin(bat.x * waveFrequency + bat.waveOffset) * waveHeight * bat.waveFactor;
+
         // Update bat animation frame with separate timing
         if (batFrameTimer > BAT_FRAME_DURATION) {
           bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
@@ -366,17 +375,26 @@ const GameCanvas = () => {
         // Draw bat if it's still on screen
         if (bat.x > -BAT_DISPLAY_WIDTH) {
           if (batImages.current[0]?.complete) {
+            // Draw the bat with the correct frame
+            ctx.save(); // Save the current context state
+
+            // Get the current frame index for this bat
+            const currentFrame = bat.frameIndex % BAT_FRAMES;
+
+            // Draw the bat sprite
             ctx.drawImage(
               batImages.current[0],
-              bat.frameIndex * BAT_FRAME_WIDTH, // Use frameIndex to get the correct frame from sprite sheet
+              currentFrame * BAT_FRAME_WIDTH,
               0,
               BAT_FRAME_WIDTH,
               BAT_FRAME_HEIGHT,
               bat.x,
-              bat.y,
+              bat.y + verticalOffset, // Aplicar movimento ondulado na coordenada Y
               BAT_DISPLAY_WIDTH,
               BAT_DISPLAY_HEIGHT
             );
+
+            ctx.restore(); // Restore the context state
           }
           return true;
         }
@@ -385,7 +403,11 @@ const GameCanvas = () => {
 
       // Reset bat animation timer after updating all bats
       if (batFrameTimer > BAT_FRAME_DURATION) {
-        batFrameTimer = 0;
+        batFrameTimer = 0; // Reset the timer
+        // Atualiza todos os frames de uma só vez
+        batEnemies.current.forEach((bat) => {
+          bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
+        });
       }
 
       // Draw foreground layers 4-5
