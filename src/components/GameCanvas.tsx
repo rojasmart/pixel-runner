@@ -42,6 +42,11 @@ interface Bat {
   deathFrame: number; // Frame atual da animação de morte
 }
 
+interface GameState {
+  score: number;
+  highScore: number;
+}
+
 const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const bunnyImage = useRef<HTMLImageElement | null>(null);
@@ -54,6 +59,12 @@ const GameCanvas = () => {
   const batEnemies = useRef<Bat[]>([]);
   const batDieImage = useRef<HTMLImageElement | null>(null); // Referência para sprite de morte
   const lastBatSpawnTime = useRef<number>(0);
+
+  // Adicionar com as outras referências
+  const gameState = useRef<GameState>({
+    score: 0,
+    highScore: 0,
+  });
 
   // Add movement state
   const movementState = useRef({
@@ -324,6 +335,15 @@ const GameCanvas = () => {
             // Colisão detectada, iniciar animação de morte
             bat.isDying = true;
             bat.deathFrame = 0;
+            // Adicionar pontuação quando matar um morcego
+            gameState.current.score += 100;
+
+            // Atualizar high score se necessário
+            if (gameState.current.score > gameState.current.highScore) {
+              gameState.current.highScore = gameState.current.score;
+              // Opcional: salvar no localStorage
+              localStorage.setItem("pixelRunnerHighScore", gameState.current.highScore.toString());
+            }
           }
         });
       }
@@ -373,6 +393,22 @@ const GameCanvas = () => {
           );
         }
       }
+
+      // Adicionar depois de desenhar todas as camadas, antes do requestAnimationFrame
+      // Renderizar pontuação na tela
+      ctx.font = "20px 'Press Start 2P', cursive"; // Use uma fonte pixel art se possível
+      ctx.fillStyle = "#FFFFFF"; // Cor branca para o texto
+      ctx.strokeStyle = "#000000"; // Contorno preto para melhor visibilidade
+
+      // Desenhar sombra para melhor contraste
+      ctx.fillStyle = "#000000";
+      ctx.fillText(`Score: ${gameState.current.score}`, 12, 32);
+      ctx.fillText(`High Score: ${gameState.current.highScore}`, 12, 62);
+
+      // Desenhar texto principal
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(`Score: ${gameState.current.score}`, 10, 30);
+      ctx.fillText(`High Score: ${gameState.current.highScore}`, 10, 60);
 
       // Handle bat spawning
       if (time - lastBatSpawnTime.current > BAT_SPAWN_INTERVAL) {
@@ -565,6 +601,14 @@ const GameCanvas = () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
+  }, []);
+
+  // Carregar o high score salvo quando o componente for montado
+  useEffect(() => {
+    const savedHighScore = localStorage.getItem("pixelRunnerHighScore");
+    if (savedHighScore) {
+      gameState.current.highScore = parseInt(savedHighScore, 10);
+    }
   }, []);
 
   return (
