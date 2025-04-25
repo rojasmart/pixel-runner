@@ -18,10 +18,23 @@ import attackSprite3 from "../../public/assets/characters/bunny/adventurer-attac
 import attackSprite4 from "../../public/assets/characters/bunny/adventurer-attack3-04.png";
 import attackSprite5 from "../../public/assets/characters/bunny/adventurer-attack3-05.png";
 
+//Enemy sprites
+import batSprite from "../../public/assets/characters/bat/Bat-IdleFly.png";
+
 interface Layer {
   image: HTMLImageElement;
   x: number;
   speed: number;
+}
+
+// Add interface for bat enemy
+interface Bat {
+  x: number;
+  y: number;
+  frameIndex: number;
+  speed: number;
+  width: number;
+  height: number;
 }
 
 const GameCanvas = () => {
@@ -30,6 +43,11 @@ const GameCanvas = () => {
   const attackImages = useRef<HTMLImageElement[]>([]);
   const jumpImages = useRef<HTMLImageElement[]>([]);
   const layersRef = useRef<Layer[]>([]);
+
+  // Add bat sprites and enemies references
+  const batImages = useRef<HTMLImageElement[]>([]);
+  const batEnemies = useRef<Bat[]>([]);
+  const lastBatSpawnTime = useRef<number>(0);
 
   // Add movement state
   const movementState = useRef({
@@ -178,6 +196,26 @@ const GameCanvas = () => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
+    // Load bat sprites
+    const batImg = new Image();
+    batImg.src = batSprite;
+    batImages.current = [batImg]; // Store the bat sprite image
+
+    // Initialize bat enemies array
+    batEnemies.current = [];
+
+    // Bat configuration
+    const BAT_FRAME_WIDTH = 32; // Width of each frame in the sprite sheet
+    const BAT_FRAME_HEIGHT = 32; // Height of each frame
+    const BAT_FRAMES = 8; // Number of animation frames in the sprite sheet
+    const BAT_FRAME_DURATION = 80; // Faster animation for bat wings
+    const BAT_DISPLAY_WIDTH = 96; // Increased display size
+    const BAT_DISPLAY_HEIGHT = 96; // Increased display height
+    const BAT_SPAWN_INTERVAL = 3000; // Spawn a new bat every 3 seconds
+
+    // Track bat animation timing separately from bunny animation
+    let batFrameTimer = 0;
+
     const draw = (time: number) => {
       const deltaTime = time - lastTime;
       lastTime = time;
@@ -297,6 +335,59 @@ const GameCanvas = () => {
           );
         }
       }
+
+      // Handle bat spawning
+      if (time - lastBatSpawnTime.current > BAT_SPAWN_INTERVAL) {
+        // Spawn a new bat
+        const bat: Bat = {
+          x: width, // Start from right side
+          y: Math.random() * (height / 2) + 50, // Random height (upper half of screen)
+          frameIndex: 0,
+          speed: 3 + Math.random() * 2, // Random speed between 3-5
+          width: BAT_FRAME_WIDTH,
+          height: BAT_FRAME_HEIGHT,
+        };
+        batEnemies.current.push(bat);
+        lastBatSpawnTime.current = time;
+      }
+      // Update bat animation timer separately
+      batFrameTimer += deltaTime;
+
+      // Update and draw bats
+      batEnemies.current = batEnemies.current.filter((bat) => {
+        // Update bat position
+        bat.x -= bat.speed;
+
+        // Update bat animation frame with separate timing
+        if (batFrameTimer > BAT_FRAME_DURATION) {
+          bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
+        }
+
+        // Draw bat if it's still on screen
+        if (bat.x > -BAT_DISPLAY_WIDTH) {
+          if (batImages.current[0]?.complete) {
+            ctx.drawImage(
+              batImages.current[0],
+              bat.frameIndex * BAT_FRAME_WIDTH, // Use frameIndex to get the correct frame from sprite sheet
+              0,
+              BAT_FRAME_WIDTH,
+              BAT_FRAME_HEIGHT,
+              bat.x,
+              bat.y,
+              BAT_DISPLAY_WIDTH,
+              BAT_DISPLAY_HEIGHT
+            );
+          }
+          return true;
+        }
+        return false; // Remove bat if it's off-screen
+      });
+
+      // Reset bat animation timer after updating all bats
+      if (batFrameTimer > BAT_FRAME_DURATION) {
+        batFrameTimer = 0;
+      }
+
       // Draw foreground layers 4-5
       layersRef.current.slice(3).forEach((layer) => {
         if (layer.image.complete) {
