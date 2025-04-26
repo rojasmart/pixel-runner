@@ -9,6 +9,9 @@ import jumpSprite0 from "../../public/assets/characters/bunny/adventurer-jump-00
 import jumpSprite1 from "../../public/assets/characters/bunny/adventurer-jump-01.png";
 import jumpSprite2 from "../../public/assets/characters/bunny/adventurer-jump-02.png";
 import jumpSprite3 from "../../public/assets/characters/bunny/adventurer-jump-03.png";
+import hurtSprite0 from "../../public/assets/characters/bunny/adventurer-hurt-00.png";
+import hurtSprite1 from "../../public/assets/characters/bunny/adventurer-hurt-01.png";
+import hurtSprite2 from "../../public/assets/characters/bunny/adventurer-hurt-02.png";
 
 // ...existing imports...
 import attackSprite0 from "../../public/assets/characters/bunny/adventurer-attack3-00.png";
@@ -45,6 +48,9 @@ interface Bat {
 interface GameState {
   score: number;
   highScore: number;
+  health: number; // Vida atual do jogador
+  maxHealth: number; // Vida máxima do jogador
+  invincibleTime: number; // Tempo de invencibilidade após levar dano
 }
 
 const GameCanvas = () => {
@@ -59,11 +65,22 @@ const GameCanvas = () => {
   const batEnemies = useRef<Bat[]>([]);
   const batDieImage = useRef<HTMLImageElement | null>(null); // Referência para sprite de morte
   const lastBatSpawnTime = useRef<number>(0);
+  const hurtImages = useRef<HTMLImageElement[]>([]);
+
+  const hurtState = useRef({
+    isHurt: false,
+    hurtFrame: 0,
+    hurtDuration: 30, // Duração da animação de dano em frames
+    lastHurtTime: 0, // Último momento em que o jogador levou dano
+  });
 
   // Adicionar com as outras referências
   const gameState = useRef<GameState>({
     score: 0,
     highScore: 0,
+    health: 100, // Vida inicial
+    maxHealth: 100, // Vida máxima
+    invincibleTime: 1000, // Invencível por 1 segundo após dano
   });
 
   // Add movement state
@@ -243,6 +260,14 @@ const GameCanvas = () => {
     let batFrameTimer = 0;
     let batDieFrameTimer = 0;
 
+    // Load hurt sprites
+    const hurtSprites = [hurtSprite0, hurtSprite1, hurtSprite2];
+    hurtImages.current = hurtSprites.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
+
     const draw = (time: number) => {
       const deltaTime = time - lastTime;
       lastTime = time;
@@ -289,8 +314,73 @@ const GameCanvas = () => {
         frameTimer = 0;
       }
 
+      // Verificar colisão entre personagem e morcegos
+      const characterX = movementState.current.positionX;
+      const characterY = jumpState.current.jumpY;
+      const characterWidth = FRAME_WIDTH * 2;
+      const characterHeight = FRAME_HEIGHT * 2;
+
+      // Verificar se o tempo de invencibilidade passou
+      const isInvincible = time - hurtState.current.lastHurtTime < gameState.current.invincibleTime;
+
+      // Verificar colisão com morcegos apenas se não estiver invencível
+      if (!isInvincible && !hurtState.current.isHurt) {
+        batEnemies.current.forEach((bat) => {
+          // Ignorar morcegos mortos
+          if (bat.isDying) return;
+
+          // Verificar colisão entre personagem e morcego
+          if (
+            characterX < bat.x + BAT_DISPLAY_WIDTH * 0.6 &&
+            characterX + characterWidth * 0.6 > bat.x &&
+            characterY < bat.y + BAT_DISPLAY_HEIGHT * 0.6 &&
+            characterY + characterHeight * 0.6 > bat.y
+          ) {
+            // Colisão detectada - jogador leva dano
+            hurtState.current.isHurt = true;
+            hurtState.current.hurtFrame = 0;
+            hurtState.current.lastHurtTime = time;
+
+            // Reduzir pontos e vida
+            gameState.current.score = Math.max(0, gameState.current.score - 50);
+            gameState.current.health = Math.max(0, gameState.current.health - 20);
+          }
+        });
+      }
+      if (hurtState.current.isHurt) {
+        // Animação de dano
+        const hurtProgress = Math.min(hurtState.current.hurtFrame / hurtState.current.hurtDuration, 1);
+        const hurtIndex = Math.min(Math.floor(hurtProgress * 3), 2);
+
+        if (hurtImages.current[hurtIndex]?.complete) {
+          ctx.drawImage(
+            hurtImages.current[hurtIndex],
+            0,
+            0,
+            FRAME_WIDTH,
+            FRAME_HEIGHT,
+            movementState.current.positionX,
+            jumpState.current.jumpY,
+            FRAME_WIDTH * 2,
+            FRAME_HEIGHT * 2
+          );
+        }
+
+        hurtState.current.hurtFrame += 1;
+
+        // Fim da animação de dano
+        if (hurtProgress >= 1) {
+          hurtState.current.isHurt = false;
+        }
+
+        // Criar efeito visual de pulsação/flash durante invencibilidade
+        if (isInvincible && Math.floor(time / 100) % 2 === 0) {
+          ctx.globalAlpha = 0.7; // Tornar personagem semi-transparente
+        }
+      }
+
       // Draw character
-      if (attackState.current.isAttacking) {
+      else if (attackState.current.isAttacking) {
         // Calculate attack animation frame
         const attackProgress = Math.min(attackState.current.attackFrame / 18, 1);
         const attackIndex = Math.min(Math.floor(attackProgress * 6), 5);
@@ -315,8 +405,7 @@ const GameCanvas = () => {
         if (attackProgress >= 1) {
           attackState.current.isAttacking = false;
         }
-      }
-      if (attackState.current.isAttacking) {
+      } else if (attackState.current.isAttacking) {
         // Área de ataque (à frente do personagem)
         const attackAreaX = movementState.current.positionX + FRAME_WIDTH;
         const attackAreaWidth = FRAME_WIDTH * 2;
@@ -592,6 +681,50 @@ const GameCanvas = () => {
         }
       });
 
+      ctx.globalAlpha = 1; // Reset alpha for next drawing
+
+      // 1. Fundo da barra (cinza)
+      ctx.fillStyle = "#444444";
+      ctx.fillRect(10, 80, 200, 20);
+
+      // 2. Barra de vida atual (verde ou amarela ou vermelha dependendo da quantidade)
+      const healthPercentage = gameState.current.health / gameState.current.maxHealth;
+
+      // Determinar cor baseado na vida restante
+      if (healthPercentage > 0.6) {
+        ctx.fillStyle = "#22CC22"; // Verde
+      } else if (healthPercentage > 0.3) {
+        ctx.fillStyle = "#CCCC22"; // Amarelo
+      } else {
+        ctx.fillStyle = "#CC2222"; // Vermelho
+      }
+
+      ctx.fillRect(10, 80, 200 * healthPercentage, 20);
+
+      // 3. Borda da barra (preto)
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 80, 200, 20);
+
+      // 4. Texto "HEALTH"
+      ctx.font = "12px 'Press Start 2P', cursive";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText("HEALTH", 15, 95);
+
+      // Game Over se a vida chegar a zero
+      if (gameState.current.health <= 0) {
+        ctx.font = "36px 'Press Start 2P', cursive";
+        ctx.fillStyle = "#CC0000";
+        ctx.fillText("GAME OVER", width / 2 - 130, height / 2);
+
+        ctx.font = "18px 'Press Start 2P', cursive";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText("Press SPACE to restart", width / 2 - 150, height / 2 + 40);
+
+        // Parar o jogo aqui, ou implementar reinício
+        // cancelAnimationFrame(animationFrameId);
+      }
+
       animationFrameId = requestAnimationFrame(draw);
     };
 
@@ -609,6 +742,21 @@ const GameCanvas = () => {
     if (savedHighScore) {
       gameState.current.highScore = parseInt(savedHighScore, 10);
     }
+  }, []);
+
+  // Adicionar uma função para reiniciar o jogo quando pressionar espaço após game over
+  useEffect(() => {
+    const handleRestart = (e: KeyboardEvent) => {
+      if (e.code === "Space" && gameState.current.health <= 0) {
+        // Resetar o jogo
+        gameState.current.health = gameState.current.maxHealth;
+        gameState.current.score = 0;
+        batEnemies.current = []; // Remover todos os morcegos
+      }
+    };
+
+    window.addEventListener("keydown", handleRestart);
+    return () => window.removeEventListener("keydown", handleRestart);
   }, []);
 
   return (
