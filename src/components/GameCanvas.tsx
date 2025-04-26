@@ -386,19 +386,25 @@ const GameCanvas = () => {
         const attackIndex = Math.min(Math.floor(attackProgress * 6), 5);
 
         // Área de ataque (à frente do personagem)
-        const attackAreaX = movementState.current.positionX + FRAME_WIDTH;
-        const attackAreaWidth = FRAME_WIDTH * 2;
-        const attackAreaY = jumpState.current.jumpY;
-        const attackAreaHeight = FRAME_HEIGHT * 2;
+        const attackAreaX = movementState.current.positionX + FRAME_WIDTH * 0.5;
+        const attackAreaWidth = FRAME_WIDTH * 2.5; // Aumentado para alcançar mais longe
+        const attackAreaY = jumpState.current.jumpY - FRAME_HEIGHT * 0.5; // Ajuste vertical
+        const attackAreaHeight = FRAME_HEIGHT * 2.5; // Área vertical maior
 
         // Verificar colisão com morcegos - ADICIONA AQUI DENTRO
         batEnemies.current.forEach((bat) => {
+          // Ajustar caixa de colisão do morcego
+          const batHitboxX = bat.x + BAT_DISPLAY_WIDTH * 0.2; // 20% de margem da borda esquerda
+          const batHitboxY = bat.y + BAT_DISPLAY_HEIGHT * 0.2; // 20% de margem do topo
+          const batHitboxWidth = BAT_DISPLAY_WIDTH * 0.6; // 60% da largura
+          const batHitboxHeight = BAT_DISPLAY_HEIGHT * 0.6; // 60% da altura
+
           if (
-            !bat.isDying && // Verificar apenas morcegos vivos
-            bat.x < attackAreaX + attackAreaWidth &&
-            bat.x + BAT_DISPLAY_WIDTH > attackAreaX &&
-            bat.y < attackAreaY + attackAreaHeight &&
-            bat.y + BAT_DISPLAY_HEIGHT > attackAreaY
+            // Verificar colisão de hitboxes ajustadas
+            attackAreaX < batHitboxX + batHitboxWidth &&
+            attackAreaX + attackAreaWidth > batHitboxX &&
+            attackAreaY < batHitboxY + batHitboxHeight &&
+            attackAreaY + attackAreaHeight > batHitboxY
           ) {
             // Colisão detectada, iniciar animação de morte
             bat.isDying = true;
