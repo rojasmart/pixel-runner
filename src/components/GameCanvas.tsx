@@ -25,6 +25,14 @@ import attackSprite5 from "../../public/assets/characters/bunny/adventurer-attac
 import batSprite from "../../public/assets/characters/bat/Bat-IdleFly.png";
 import batDieSprite from "../../public/assets/characters/bat/Bat-Die.png";
 
+interface FloatingNumber {
+  x: number;
+  y: number;
+  value: number;
+  opacity: number;
+  velocity: { x: number; y: number };
+}
+
 interface Layer {
   image: HTMLImageElement;
   x: number;
@@ -59,6 +67,7 @@ const GameCanvas = () => {
   const attackImages = useRef<HTMLImageElement[]>([]);
   const jumpImages = useRef<HTMLImageElement[]>([]);
   const layersRef = useRef<Layer[]>([]);
+  const floatingNumbers = useRef<FloatingNumber[]>([]);
 
   // Add bat sprites and enemies references
   const batImages = useRef<HTMLImageElement[]>([]);
@@ -66,6 +75,19 @@ const GameCanvas = () => {
   const batDieImage = useRef<HTMLImageElement | null>(null); // Referência para sprite de morte
   const lastBatSpawnTime = useRef<number>(0);
   const hurtImages = useRef<HTMLImageElement[]>([]);
+
+  const createFloatingNumber = (x: number, y: number, value: number) => {
+    floatingNumbers.current.push({
+      x,
+      y,
+      value,
+      opacity: 1,
+      velocity: {
+        x: (Math.random() - 0.5) * 3, // Random horizontal spread
+        y: -3, // Initial upward velocity
+      },
+    });
+  };
 
   const hurtState = useRef({
     isHurt: false,
@@ -291,6 +313,40 @@ const GameCanvas = () => {
         }
       });
 
+      // Then modify the floating numbers rendering to handle negative values:
+      floatingNumbers.current = floatingNumbers.current.filter((number) => {
+        // Update position
+        number.x += number.velocity.x;
+        number.y += number.velocity.y;
+        number.velocity.y += 0.1; // Add gravity
+        number.opacity -= 0.02; // Fade out
+
+        // Draw number
+        if (number.opacity > 0) {
+          ctx.save();
+          ctx.font = "bold 20px 'Press Start 2P', cursive";
+
+          // Change color based on positive/negative value
+          if (number.value > 0) {
+            ctx.fillStyle = `rgba(255, 255, 0, ${number.opacity})`; // Yellow for positive
+            ctx.strokeStyle = `rgba(0, 0, 0, ${number.opacity})`;
+            ctx.lineWidth = 3;
+            ctx.strokeText(`+${number.value}`, number.x, number.y);
+            ctx.fillText(`+${number.value}`, number.x, number.y);
+          } else {
+            ctx.fillStyle = `rgba(255, 50, 50, ${number.opacity})`; // Red for negative
+            ctx.strokeStyle = `rgba(0, 0, 0, ${number.opacity})`;
+            ctx.lineWidth = 3;
+            ctx.strokeText(`${number.value}`, number.x, number.y);
+            ctx.fillText(`${number.value}`, number.x, number.y);
+          }
+
+          ctx.restore();
+          return true;
+        }
+        return false;
+      });
+
       // Update bunny position based on movement state
       if (movementState.current.movingLeft) {
         movementState.current.positionX -= movementState.current.speed;
@@ -344,6 +400,13 @@ const GameCanvas = () => {
             // Reduzir pontos e vida
             gameState.current.score = Math.max(0, gameState.current.score - 50);
             gameState.current.health = Math.max(0, gameState.current.health - 20);
+
+            // Add floating damage number
+            createFloatingNumber(
+              characterX + characterWidth / 2,
+              characterY,
+              -20 // Negative value to show damage
+            );
           }
         });
       }
@@ -411,6 +474,9 @@ const GameCanvas = () => {
             bat.deathFrame = 0;
             // Adicionar pontuação quando matar um morcego
             gameState.current.score += 100;
+
+            // Add floating number
+            createFloatingNumber(bat.x + BAT_DISPLAY_WIDTH / 2, bat.y, 100);
 
             // Atualizar high score se necessário
             if (gameState.current.score > gameState.current.highScore) {
