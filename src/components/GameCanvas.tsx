@@ -313,6 +313,7 @@ const GameCanvas = () => {
         }
       });
 
+      // Then modify the floating numbers rendering to handle negative values:
       floatingNumbers.current = floatingNumbers.current.filter((number) => {
         // Update position
         number.x += number.velocity.x;
@@ -324,11 +325,22 @@ const GameCanvas = () => {
         if (number.opacity > 0) {
           ctx.save();
           ctx.font = "bold 20px 'Press Start 2P', cursive";
-          ctx.fillStyle = `rgba(255, 255, 0, ${number.opacity})`; // Yellow color
-          ctx.strokeStyle = `rgba(0, 0, 0, ${number.opacity})`;
-          ctx.lineWidth = 3;
-          ctx.strokeText(`+${number.value}`, number.x, number.y);
-          ctx.fillText(`+${number.value}`, number.x, number.y);
+
+          // Change color based on positive/negative value
+          if (number.value > 0) {
+            ctx.fillStyle = `rgba(255, 255, 0, ${number.opacity})`; // Yellow for positive
+            ctx.strokeStyle = `rgba(0, 0, 0, ${number.opacity})`;
+            ctx.lineWidth = 3;
+            ctx.strokeText(`+${number.value}`, number.x, number.y);
+            ctx.fillText(`+${number.value}`, number.x, number.y);
+          } else {
+            ctx.fillStyle = `rgba(255, 50, 50, ${number.opacity})`; // Red for negative
+            ctx.strokeStyle = `rgba(0, 0, 0, ${number.opacity})`;
+            ctx.lineWidth = 3;
+            ctx.strokeText(`${number.value}`, number.x, number.y);
+            ctx.fillText(`${number.value}`, number.x, number.y);
+          }
+
           ctx.restore();
           return true;
         }
@@ -388,6 +400,13 @@ const GameCanvas = () => {
             // Reduzir pontos e vida
             gameState.current.score = Math.max(0, gameState.current.score - 50);
             gameState.current.health = Math.max(0, gameState.current.health - 20);
+
+            // Add floating damage number
+            createFloatingNumber(
+              characterX + characterWidth / 2,
+              characterY,
+              -20 // Negative value to show damage
+            );
           }
         });
       }
