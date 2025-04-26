@@ -385,34 +385,13 @@ const GameCanvas = () => {
         const attackProgress = Math.min(attackState.current.attackFrame / 18, 1);
         const attackIndex = Math.min(Math.floor(attackProgress * 6), 5);
 
-        if (attackImages.current[attackIndex]?.complete) {
-          ctx.drawImage(
-            attackImages.current[attackIndex],
-            0,
-            0,
-            FRAME_WIDTH,
-            FRAME_HEIGHT,
-            movementState.current.positionX, // Changed from bunnyX to dynamic position
-            jumpState.current.jumpY,
-            FRAME_WIDTH * 2,
-            FRAME_HEIGHT * 2
-          );
-        }
-
-        attackState.current.attackFrame += 1;
-
-        // End attack when animation is complete
-        if (attackProgress >= 1) {
-          attackState.current.isAttacking = false;
-        }
-      } else if (attackState.current.isAttacking) {
         // Área de ataque (à frente do personagem)
         const attackAreaX = movementState.current.positionX + FRAME_WIDTH;
         const attackAreaWidth = FRAME_WIDTH * 2;
         const attackAreaY = jumpState.current.jumpY;
         const attackAreaHeight = FRAME_HEIGHT * 2;
 
-        // Verificar colisão com morcegos
+        // Verificar colisão com morcegos - ADICIONA AQUI DENTRO
         batEnemies.current.forEach((bat) => {
           if (
             !bat.isDying && // Verificar apenas morcegos vivos
@@ -430,11 +409,31 @@ const GameCanvas = () => {
             // Atualizar high score se necessário
             if (gameState.current.score > gameState.current.highScore) {
               gameState.current.highScore = gameState.current.score;
-              // Opcional: salvar no localStorage
               localStorage.setItem("pixelRunnerHighScore", gameState.current.highScore.toString());
             }
           }
         });
+
+        if (attackImages.current[attackIndex]?.complete) {
+          ctx.drawImage(
+            attackImages.current[attackIndex],
+            0,
+            0,
+            FRAME_WIDTH,
+            FRAME_HEIGHT,
+            movementState.current.positionX,
+            jumpState.current.jumpY,
+            FRAME_WIDTH * 2,
+            FRAME_HEIGHT * 2
+          );
+        }
+
+        attackState.current.attackFrame += 1;
+
+        // End attack when animation is complete
+        if (attackProgress >= 1) {
+          attackState.current.isAttacking = false;
+        }
       }
       // Draw bunny with jumping or running animation
       else if (jumpState.current.isJumping) {
@@ -520,48 +519,6 @@ const GameCanvas = () => {
       batDieFrameTimer += deltaTime;
 
       // Update and draw bats
-      batEnemies.current = batEnemies.current.filter((bat) => {
-        // Update bat position
-        bat.x -= bat.speed;
-
-        // Calcular movimento vertical ondulado
-        const waveHeight = 8; // Altura máxima da onda (pixels)
-        const waveFrequency = 0.01; // Frequência da oscilação
-        const verticalOffset = Math.sin(bat.x * waveFrequency + bat.waveOffset) * waveHeight * bat.waveFactor;
-
-        // Update bat animation frame with separate timing
-        if (batFrameTimer > BAT_FRAME_DURATION) {
-          bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
-        }
-
-        // Draw bat if it's still on screen
-        if (bat.x > -BAT_DISPLAY_WIDTH) {
-          if (batImages.current[0]?.complete) {
-            // Draw the bat with the correct frame
-            ctx.save(); // Save the current context state
-
-            // Get the current frame index for this bat
-            const currentFrame = bat.frameIndex % BAT_FRAMES;
-
-            // Draw the bat sprite
-            ctx.drawImage(
-              batImages.current[0],
-              currentFrame * BAT_FRAME_WIDTH,
-              0,
-              BAT_FRAME_WIDTH,
-              BAT_FRAME_HEIGHT,
-              bat.x,
-              bat.y + verticalOffset, // Aplicar movimento ondulado na coordenada Y
-              BAT_DISPLAY_WIDTH,
-              BAT_DISPLAY_HEIGHT
-            );
-
-            ctx.restore(); // Restore the context state
-          }
-          return true;
-        }
-        return false; // Remove bat if it's off-screen
-      });
 
       batEnemies.current = batEnemies.current.filter((bat) => {
         // Morcegos morrendo têm velocidade reduzida
