@@ -3,7 +3,8 @@
 ## Overview
 Pixel Runner is an action-packed side-scrolling game built with React and TypeScript, featuring fluid animations, parallax backgrounds, and engaging combat mechanics. Play as a brave bunny warrior slashing through flying bat enemies while navigating through a beautifully rendered forest environment.
 
-![Pixel Runner Game](screenshot.png)
+![image](https://github.com/user-attachments/assets/2f30d2cd-7f8b-40a6-b91e-371b33dad7e4)
+
 
 ## Features
 
@@ -101,6 +102,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 Feel free to contribute to this project by submitting pull requests or opening issues for bugs and feature requests
-
-
-![image](https://github.com/user-attachments/assets/53314cb3-34c8-4a47-8732-5be35f402c31)
