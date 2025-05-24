@@ -132,11 +132,6 @@ const GameCanvas = () => {
     attackDuration: 300, // Adjust timing as needed
   });
 
-  // Toggle settings function
-  const toggleSettings = () => {
-    setShowSettings(!showSettings);
-  };
-
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
