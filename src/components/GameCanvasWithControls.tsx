@@ -326,6 +326,9 @@ const GameCanvas = () => {
       const deltaTime = time - lastTime;
       lastTime = time;
 
+      // Definir isInvincible no início do draw
+      const isInvincible = time - hurtState.current.lastHurtTime < gameState.current.invincibleTime;
+
       ctx.clearRect(0, 0, width, height);
 
       // Draw background layers
@@ -414,13 +417,14 @@ const GameCanvas = () => {
         const characterHeight = FRAME_HEIGHT * 2;
 
         // Verificar se o tempo de invencibilidade passou
-        const isInvincible = time - hurtState.current.lastHurtTime < gameState.current.invincibleTime;
+        // const isInvincible = time - hurtState.current.lastHurtTime < gameState.current.invincibleTime;
 
         // Verificar colisão com morcegos apenas se não estiver invencível
         if (!isInvincible && !hurtState.current.isHurt) {
-          batEnemies.current.forEach((bat) => {
+          for (let i = 0; i < batEnemies.current.length; i++) {
+            const bat = batEnemies.current[i];
             // Ignorar morcegos mortos
-            if (bat.isDying) return;
+            if (bat.isDying) continue;
 
             // Verificar colisão entre personagem e morcego
             if (
@@ -444,8 +448,9 @@ const GameCanvas = () => {
                 characterY,
                 -20 // Negative value to show damage
               );
+              break; // Sai do loop após a primeira colisão
             }
-          });
+          }
         }
       }
 
@@ -475,7 +480,10 @@ const GameCanvas = () => {
 
         // Fim da animação de dano
         if (hurtProgress >= 1) {
-          hurtState.current.isHurt = false;
+          // Só sai do estado de dano quando o tempo de invencibilidade acabar
+          if (!isInvincible) {
+            hurtState.current.isHurt = false;
+          }
         }
 
         // Criar efeito visual de pulsação/flash durante invencibilidade
