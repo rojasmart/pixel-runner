@@ -25,10 +25,6 @@ import attackSprite5 from "@/public/assets/characters/bunny/adventurer-attack3-0
 import batSprite from "@/public/assets/characters/bat/Bat-IdleFly.png";
 import batDieSprite from "@/public/assets/characters/bat/Bat-Die.png";
 
-// Import the settings menu and controls component
-import GameControls from "./GameControls";
-import SettingsMenu from "./SettingsMenu";
-
 interface FloatingNumber {
   x: number;
   y: number;
