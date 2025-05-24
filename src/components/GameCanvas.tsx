@@ -1,29 +1,29 @@
 import { useEffect, useRef } from "react";
-import bunnySprite from "../../public/assets/characters/bunny/adventurer-run3-sword-Sheet.png";
-import bg1 from "../../public/assets/background/1.png";
-import bg2 from "../../public/assets/background/2.png";
-import bg3 from "../../public/assets/background/3.png";
-import bg4 from "../../public/assets/background/4.png";
-import bg5 from "../../public/assets/background/5.png";
-import jumpSprite0 from "../../public/assets/characters/bunny/adventurer-jump-00.png";
-import jumpSprite1 from "../../public/assets/characters/bunny/adventurer-jump-01.png";
-import jumpSprite2 from "../../public/assets/characters/bunny/adventurer-jump-02.png";
-import jumpSprite3 from "../../public/assets/characters/bunny/adventurer-jump-03.png";
-import hurtSprite0 from "../../public/assets/characters/bunny/adventurer-hurt-00.png";
-import hurtSprite1 from "../../public/assets/characters/bunny/adventurer-hurt-01.png";
-import hurtSprite2 from "../../public/assets/characters/bunny/adventurer-hurt-02.png";
+import bunnySprite from "@/public/assets/characters/bunny/adventurer-run3-sword-Sheet.png";
+import bg1 from "@/public/assets/background/1.png";
+import bg2 from "@/public/assets/background/2.png";
+import bg3 from "@/public/assets/background/3.png";
+import bg4 from "@/public/assets/background/4.png";
+import bg5 from "@/public/assets/background/5.png";
+import jumpSprite0 from "@/public/assets/characters/bunny/adventurer-jump-00.png";
+import jumpSprite1 from "@/public/assets/characters/bunny/adventurer-jump-01.png";
+import jumpSprite2 from "@/public/assets/characters/bunny/adventurer-jump-02.png";
+import jumpSprite3 from "@/public/assets/characters/bunny/adventurer-jump-03.png";
+import hurtSprite0 from "@/public/assets/characters/bunny/adventurer-hurt-00.png";
+import hurtSprite1 from "@/public/assets/characters/bunny/adventurer-hurt-01.png";
+import hurtSprite2 from "@/public/assets/characters/bunny/adventurer-hurt-02.png";
 
-// ...existing imports...
-import attackSprite0 from "../../public/assets/characters/bunny/adventurer-attack3-00.png";
-import attackSprite1 from "../../public/assets/characters/bunny/adventurer-attack3-01.png";
-import attackSprite2 from "../../public/assets/characters/bunny/adventurer-attack3-02.png";
-import attackSprite3 from "../../public/assets/characters/bunny/adventurer-attack3-03.png";
-import attackSprite4 from "../../public/assets/characters/bunny/adventurer-attack3-04.png";
-import attackSprite5 from "../../public/assets/characters/bunny/adventurer-attack3-05.png";
+// Attack sprites
+import attackSprite0 from "@/public/assets/characters/bunny/adventurer-attack3-00.png";
+import attackSprite1 from "@/public/assets/characters/bunny/adventurer-attack3-01.png";
+import attackSprite2 from "@/public/assets/characters/bunny/adventurer-attack3-02.png";
+import attackSprite3 from "@/public/assets/characters/bunny/adventurer-attack3-03.png";
+import attackSprite4 from "@/public/assets/characters/bunny/adventurer-attack3-04.png";
+import attackSprite5 from "@/public/assets/characters/bunny/adventurer-attack3-05.png";
 
-//Enemy sprites
-import batSprite from "../../public/assets/characters/bat/Bat-IdleFly.png";
-import batDieSprite from "../../public/assets/characters/bat/Bat-Die.png";
+// Enemy sprites
+import batSprite from "@/public/assets/characters/bat/Bat-IdleFly.png";
+import batDieSprite from "@/public/assets/characters/bat/Bat-Die.png";
 
 interface FloatingNumber {
   x: number;
@@ -146,10 +146,7 @@ const GameCanvas = () => {
     const TOTAL_FRAMES = 6;
     let frameIndex = 0;
     let frameTimer = 0;
-    const FRAME_DURATION = 100;
-
-    // Bunny position
-    const bunnyX = 100;
+    const FRAME_DURATION = 100; // Bunny position
     const groundY = height - 100;
     const bunnyY = groundY - FRAME_HEIGHT * 2;
 
@@ -568,9 +565,7 @@ const GameCanvas = () => {
       // Desenhar texto principal
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(`Score: ${gameState.current.score}`, 10, 30);
-      ctx.fillText(`High Score: ${gameState.current.highScore}`, 10, 60);
-
-      // Handle bat spawning
+      ctx.fillText(`High Score: ${gameState.current.highScore}`, 10, 60); // Handle bat spawning
       if (time - lastBatSpawnTime.current > BAT_SPAWN_INTERVAL) {
         // Spawn a new bat
         const bat: Bat = {
@@ -582,6 +577,8 @@ const GameCanvas = () => {
           height: BAT_FRAME_HEIGHT,
           waveFactor: Math.random() * 0.5 + 0.5, // Fator de ondulação entre 0.5 e 1
           waveOffset: Math.random() * Math.PI * 2, // Offset aleatório para variar movimento
+          isDying: false, // Inicialmente não está morrendo
+          deathFrame: 0, // Frame inicial da animação de morte
         };
         batEnemies.current.push(bat);
         lastBatSpawnTime.current = time;
