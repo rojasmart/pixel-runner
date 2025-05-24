@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import bunnySprite from "@/public/assets/characters/bunny/adventurer-run3-sword-Sheet.png";
 import bg1 from "@/public/assets/background/1.png";
 import bg2 from "@/public/assets/background/2.png";
@@ -24,6 +24,10 @@ import attackSprite5 from "@/public/assets/characters/bunny/adventurer-attack3-0
 // Enemy sprites
 import batSprite from "@/public/assets/characters/bat/Bat-IdleFly.png";
 import batDieSprite from "@/public/assets/characters/bat/Bat-Die.png";
+
+// Import the settings menu and controls component
+import GameControls from "./GameControls";
+import SettingsMenu from "./SettingsMenu";
 
 interface FloatingNumber {
   x: number;
@@ -62,6 +66,9 @@ interface GameState {
 }
 
 const GameCanvas = () => {
+  // Add state for settings menu
+  const [showSettings, setShowSettings] = useState(false);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const bunnyImage = useRef<HTMLImageElement | null>(null);
   const attackImages = useRef<HTMLImageElement[]>([]);
@@ -129,6 +136,11 @@ const GameCanvas = () => {
     attackDuration: 300, // Adjust timing as needed
   });
 
+  // Toggle settings function
+  const toggleSettings = () => {
+    setShowSettings(!showSettings);
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -191,31 +203,15 @@ const GameCanvas = () => {
     });
 
     // Handle keyboard input
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !jumpState.current.isJumping) {
-        jumpState.current.isJumping = true;
-        jumpState.current.jumpFrame = 0;
-        jumpState.current.initialY = jumpState.current.jumpY;
-      }
-
-      if (e.code === "KeyW" && !attackState.current.isAttacking) {
-        attackState.current.isAttacking = true;
-        attackState.current.attackFrame = 0;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-
-    // Load bunny sprite
-    const bunny = new Image();
-    bunny.src = bunnySprite;
-    bunnyImage.current = bunny;
-
-    let lastTime = performance.now();
-    let animationFrameId: number;
-
-    // Handle keyboard input
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Se o menu de configurações estiver aberto, apenas permita a tecla ESC para fechá-lo
+      if (showSettings) {
+        if (e.code === "Escape") {
+          setShowSettings(false);
+        }
+        return; // Não processar outras teclas quando o menu estiver aberto
+      }
+
       if (e.code === "Space" && !jumpState.current.isJumping) {
         jumpState.current.isJumping = true;
         jumpState.current.jumpFrame = 0;
@@ -234,6 +230,11 @@ const GameCanvas = () => {
       if (e.code === "KeyD") {
         movementState.current.movingRight = true;
       }
+
+      // Abrir menu de configurações
+      if (e.code === "Escape") {
+        setShowSettings(!showSettings);
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -248,6 +249,11 @@ const GameCanvas = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+
+    // Load bunny sprite
+    const bunny = new Image();
+    bunny.src = bunnySprite;
+    bunnyImage.current = bunny;
 
     // Load bat sprites
     const batImg = new Image();
@@ -287,6 +293,35 @@ const GameCanvas = () => {
       return img;
     });
 
+    let lastTime = performance.now();
+    let animationFrameId: number;
+
+    // Desenhar controles do jogo na lateral esquerda
+    const drawControls = () => {
+      const controlsX = 20;
+      const controlsY = height - 160; // Posicionar na parte inferior esquerda
+
+      // Desenhar caixa de fundo semi-transparente
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillRect(controlsX - 10, controlsY - 25, 150, 140);
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(controlsX - 10, controlsY - 25, 150, 140);
+
+      // Título dos controles
+      ctx.font = "12px 'Press Start 2P', cursive";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText("CONTROLS:", controlsX, controlsY);
+
+      // Teclas e descrições
+      ctx.font = "10px 'Press Start 2P', cursive";
+      ctx.fillText("A - Move Left", controlsX, controlsY + 25);
+      ctx.fillText("D - Move Right", controlsX, controlsY + 45);
+      ctx.fillText("W - Attack", controlsX, controlsY + 65);
+      ctx.fillText("SPACE - Jump", controlsX, controlsY + 85);
+      ctx.fillText("ESC - Settings", controlsX, controlsY + 105);
+    };
+
     const draw = (time: number) => {
       const deltaTime = time - lastTime;
       lastTime = time;
@@ -296,12 +331,14 @@ const GameCanvas = () => {
       // Draw background layers
       layersRef.current.slice(0, 3).forEach((layer) => {
         if (layer.image.complete) {
-          // Move the layer
-          layer.x -= layer.speed;
+          // Move the layer (apenas se o menu de configurações não estiver aberto)
+          if (!showSettings) {
+            layer.x -= layer.speed;
 
-          // Reset position when image goes off screen
-          if (layer.x <= -width) {
-            layer.x = 0;
+            // Reset position when image goes off screen
+            if (layer.x <= -width) {
+              layer.x = 0;
+            }
           }
 
           // Draw two copies of the image for seamless scrolling
@@ -313,10 +350,12 @@ const GameCanvas = () => {
       // Then modify the floating numbers rendering to handle negative values:
       floatingNumbers.current = floatingNumbers.current.filter((number) => {
         // Update position
-        number.x += number.velocity.x;
-        number.y += number.velocity.y;
-        number.velocity.y += 0.1; // Add gravity
-        number.opacity -= 0.02; // Fade out
+        if (!showSettings) {
+          number.x += number.velocity.x;
+          number.y += number.velocity.y;
+          number.velocity.y += 0.1; // Add gravity
+          number.opacity -= 0.02; // Fade out
+        }
 
         // Draw number
         if (number.opacity > 0) {
@@ -345,68 +384,72 @@ const GameCanvas = () => {
       });
 
       // Update bunny position based on movement state
-      if (movementState.current.movingLeft) {
-        movementState.current.positionX -= movementState.current.speed;
-        // Prevent moving off left edge
-        if (movementState.current.positionX < 0) {
-          movementState.current.positionX = 0;
-        }
-      }
-      if (movementState.current.movingRight) {
-        movementState.current.positionX += movementState.current.speed;
-        // Prevent moving off right edge
-        if (movementState.current.positionX > width - FRAME_WIDTH * 2) {
-          movementState.current.positionX = width - FRAME_WIDTH * 2;
-        }
-      }
-
-      // Update bunny animation
-      frameTimer += deltaTime;
-      if (frameTimer > FRAME_DURATION) {
-        frameIndex = (frameIndex + 1) % TOTAL_FRAMES;
-        frameTimer = 0;
-      }
-
-      // Verificar colisão entre personagem e morcegos
-      const characterX = movementState.current.positionX;
-      const characterY = jumpState.current.jumpY;
-      const characterWidth = FRAME_WIDTH * 2;
-      const characterHeight = FRAME_HEIGHT * 2;
-
-      // Verificar se o tempo de invencibilidade passou
-      const isInvincible = time - hurtState.current.lastHurtTime < gameState.current.invincibleTime;
-
-      // Verificar colisão com morcegos apenas se não estiver invencível
-      if (!isInvincible && !hurtState.current.isHurt) {
-        batEnemies.current.forEach((bat) => {
-          // Ignorar morcegos mortos
-          if (bat.isDying) return;
-
-          // Verificar colisão entre personagem e morcego
-          if (
-            characterX < bat.x + BAT_DISPLAY_WIDTH * 0.6 &&
-            characterX + characterWidth * 0.6 > bat.x &&
-            characterY < bat.y + BAT_DISPLAY_HEIGHT * 0.6 &&
-            characterY + characterHeight * 0.6 > bat.y
-          ) {
-            // Colisão detectada - jogador leva dano
-            hurtState.current.isHurt = true;
-            hurtState.current.hurtFrame = 0;
-            hurtState.current.lastHurtTime = time;
-
-            // Reduzir pontos e vida
-            gameState.current.score = Math.max(0, gameState.current.score - 50);
-            gameState.current.health = Math.max(0, gameState.current.health - 20);
-
-            // Add floating damage number
-            createFloatingNumber(
-              characterX + characterWidth / 2,
-              characterY,
-              -20 // Negative value to show damage
-            );
+      if (!showSettings) {
+        if (movementState.current.movingLeft) {
+          movementState.current.positionX -= movementState.current.speed;
+          // Prevent moving off left edge
+          if (movementState.current.positionX < 0) {
+            movementState.current.positionX = 0;
           }
-        });
+        }
+        if (movementState.current.movingRight) {
+          movementState.current.positionX += movementState.current.speed;
+          // Prevent moving off right edge
+          if (movementState.current.positionX > width - FRAME_WIDTH * 2) {
+            movementState.current.positionX = width - FRAME_WIDTH * 2;
+          }
+        }
+
+        // Update bunny animation
+        frameTimer += deltaTime;
+        if (frameTimer > FRAME_DURATION) {
+          frameIndex = (frameIndex + 1) % TOTAL_FRAMES;
+          frameTimer = 0;
+        }
+
+        // Verificar colisão entre personagem e morcegos
+        const characterX = movementState.current.positionX;
+        const characterY = jumpState.current.jumpY;
+        const characterWidth = FRAME_WIDTH * 2;
+        const characterHeight = FRAME_HEIGHT * 2;
+
+        // Verificar se o tempo de invencibilidade passou
+        const isInvincible = time - hurtState.current.lastHurtTime < gameState.current.invincibleTime;
+
+        // Verificar colisão com morcegos apenas se não estiver invencível
+        if (!isInvincible && !hurtState.current.isHurt) {
+          batEnemies.current.forEach((bat) => {
+            // Ignorar morcegos mortos
+            if (bat.isDying) return;
+
+            // Verificar colisão entre personagem e morcego
+            if (
+              characterX < bat.x + BAT_DISPLAY_WIDTH * 0.6 &&
+              characterX + characterWidth * 0.6 > bat.x &&
+              characterY < bat.y + BAT_DISPLAY_HEIGHT * 0.6 &&
+              characterY + characterHeight * 0.6 > bat.y
+            ) {
+              // Colisão detectada - jogador leva dano
+              hurtState.current.isHurt = true;
+              hurtState.current.hurtFrame = 0;
+              hurtState.current.lastHurtTime = time;
+
+              // Reduzir pontos e vida
+              gameState.current.score = Math.max(0, gameState.current.score - 50);
+              gameState.current.health = Math.max(0, gameState.current.health - 20);
+
+              // Add floating damage number
+              createFloatingNumber(
+                characterX + characterWidth / 2,
+                characterY,
+                -20 // Negative value to show damage
+              );
+            }
+          });
+        }
       }
+
+      // Draw character based on state
       if (hurtState.current.isHurt) {
         // Animação de dano
         const hurtProgress = Math.min(hurtState.current.hurtFrame / hurtState.current.hurtDuration, 1);
@@ -426,7 +469,9 @@ const GameCanvas = () => {
           );
         }
 
-        hurtState.current.hurtFrame += 1;
+        if (!showSettings) {
+          hurtState.current.hurtFrame += 1;
+        }
 
         // Fim da animação de dano
         if (hurtProgress >= 1) {
@@ -438,7 +483,6 @@ const GameCanvas = () => {
           ctx.globalAlpha = 0.7; // Tornar personagem semi-transparente
         }
       }
-
       // Draw character
       else if (attackState.current.isAttacking) {
         // Calculate attack animation frame
@@ -451,37 +495,39 @@ const GameCanvas = () => {
         const attackAreaY = jumpState.current.jumpY - FRAME_HEIGHT * 0.5; // Ajuste vertical
         const attackAreaHeight = FRAME_HEIGHT * 2.5; // Área vertical maior
 
-        // Verificar colisão com morcegos - ADICIONA AQUI DENTRO
-        batEnemies.current.forEach((bat) => {
-          // Ajustar caixa de colisão do morcego
-          const batHitboxX = bat.x + BAT_DISPLAY_WIDTH * 0.2; // 20% de margem da borda esquerda
-          const batHitboxY = bat.y + BAT_DISPLAY_HEIGHT * 0.2; // 20% de margem do topo
-          const batHitboxWidth = BAT_DISPLAY_WIDTH * 0.6; // 60% da largura
-          const batHitboxHeight = BAT_DISPLAY_HEIGHT * 0.6; // 60% da altura
+        // Verificar colisão com morcegos apenas se não estiver no menu
+        if (!showSettings) {
+          batEnemies.current.forEach((bat) => {
+            // Ajustar caixa de colisão do morcego
+            const batHitboxX = bat.x + BAT_DISPLAY_WIDTH * 0.2; // 20% de margem da borda esquerda
+            const batHitboxY = bat.y + BAT_DISPLAY_HEIGHT * 0.2; // 20% de margem do topo
+            const batHitboxWidth = BAT_DISPLAY_WIDTH * 0.6; // 60% da largura
+            const batHitboxHeight = BAT_DISPLAY_HEIGHT * 0.6; // 60% da altura
 
-          if (
-            // Verificar colisão de hitboxes ajustadas
-            attackAreaX < batHitboxX + batHitboxWidth &&
-            attackAreaX + attackAreaWidth > batHitboxX &&
-            attackAreaY < batHitboxY + batHitboxHeight &&
-            attackAreaY + attackAreaHeight > batHitboxY
-          ) {
-            // Colisão detectada, iniciar animação de morte
-            bat.isDying = true;
-            bat.deathFrame = 0;
-            // Adicionar pontuação quando matar um morcego
-            gameState.current.score += 100;
+            if (
+              // Verificar colisão de hitboxes ajustadas
+              attackAreaX < batHitboxX + batHitboxWidth &&
+              attackAreaX + attackAreaWidth > batHitboxX &&
+              attackAreaY < batHitboxY + batHitboxHeight &&
+              attackAreaY + attackAreaHeight > batHitboxY
+            ) {
+              // Colisão detectada, iniciar animação de morte
+              bat.isDying = true;
+              bat.deathFrame = 0;
+              // Adicionar pontuação quando matar um morcego
+              gameState.current.score += 100;
 
-            // Add floating number
-            createFloatingNumber(bat.x + BAT_DISPLAY_WIDTH / 2, bat.y, 100);
+              // Add floating number
+              createFloatingNumber(bat.x + BAT_DISPLAY_WIDTH / 2, bat.y, 100);
 
-            // Atualizar high score se necessário
-            if (gameState.current.score > gameState.current.highScore) {
-              gameState.current.highScore = gameState.current.score;
-              localStorage.setItem("pixelRunnerHighScore", gameState.current.highScore.toString());
+              // Atualizar high score se necessário
+              if (gameState.current.score > gameState.current.highScore) {
+                gameState.current.highScore = gameState.current.score;
+                localStorage.setItem("pixelRunnerHighScore", gameState.current.highScore.toString());
+              }
             }
-          }
-        });
+          });
+        }
 
         if (attackImages.current[attackIndex]?.complete) {
           ctx.drawImage(
@@ -497,7 +543,9 @@ const GameCanvas = () => {
           );
         }
 
-        attackState.current.attackFrame += 1;
+        if (!showSettings) {
+          attackState.current.attackFrame += 1;
+        }
 
         // End attack when animation is complete
         if (attackProgress >= 1) {
@@ -509,7 +557,10 @@ const GameCanvas = () => {
         // Calculate jump height using sine wave for smooth up/down motion
         const jumpProgress = Math.min(jumpState.current.jumpFrame / 30, 1);
         const jumpCurve = Math.sin(jumpProgress * Math.PI);
-        jumpState.current.jumpY = jumpState.current.initialY - jumpCurve * jumpState.current.jumpHeight;
+
+        if (!showSettings) {
+          jumpState.current.jumpY = jumpState.current.initialY - jumpCurve * jumpState.current.jumpHeight;
+        }
 
         // Draw jump animation frames
         const jumpIndex = Math.min(Math.floor(jumpProgress * 4), 3);
@@ -527,7 +578,9 @@ const GameCanvas = () => {
           );
         }
 
-        jumpState.current.jumpFrame += 1;
+        if (!showSettings) {
+          jumpState.current.jumpFrame += 1;
+        }
 
         // End jump when animation is complete
         if (jumpProgress >= 1) {
@@ -551,11 +604,10 @@ const GameCanvas = () => {
         }
       }
 
-      // Adicionar depois de desenhar todas as camadas, antes do requestAnimationFrame
       // Renderizar pontuação na tela
-      ctx.font = "20px 'Press Start 2P', cursive"; // Use uma fonte pixel art se possível
-      ctx.fillStyle = "#FFFFFF"; // Cor branca para o texto
-      ctx.strokeStyle = "#000000"; // Contorno preto para melhor visibilidade
+      ctx.font = "20px 'Press Start 2P', cursive";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.strokeStyle = "#000000";
 
       // Desenhar sombra para melhor contraste
       ctx.fillStyle = "#000000";
@@ -565,8 +617,33 @@ const GameCanvas = () => {
       // Desenhar texto principal
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(`Score: ${gameState.current.score}`, 10, 30);
-      ctx.fillText(`High Score: ${gameState.current.highScore}`, 10, 60); // Handle bat spawning
-      if (time - lastBatSpawnTime.current > BAT_SPAWN_INTERVAL) {
+      ctx.fillText(`High Score: ${gameState.current.highScore}`, 10, 60);
+
+      // Botão de configurações no canto superior direito
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillRect(width - 50, 10, 40, 40);
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(width - 50, 10, 40, 40);
+
+      // Ícone de engrenagem (simplificado)
+      ctx.beginPath();
+      ctx.arc(width - 30, 30, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(width - 30, 30, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fill();
+
+      // Pequeno texto indicando a tecla
+      ctx.font = "8px 'Press Start 2P', cursive";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText("ESC", width - 45, 58);
+
+      // Handle bat spawning - só spawn novos morcegos se o menu não estiver aberto
+      if (!showSettings && time - lastBatSpawnTime.current > BAT_SPAWN_INTERVAL) {
         // Spawn a new bat
         const bat: Bat = {
           x: width, // Start from right side
@@ -583,25 +660,29 @@ const GameCanvas = () => {
         batEnemies.current.push(bat);
         lastBatSpawnTime.current = time;
       }
-      // Update bat animation timer separately
-      batFrameTimer += deltaTime;
-      batDieFrameTimer += deltaTime;
+
+      if (!showSettings) {
+        // Update bat animation timer separately
+        batFrameTimer += deltaTime;
+        batDieFrameTimer += deltaTime;
+      }
 
       // Update and draw bats
-
       batEnemies.current = batEnemies.current.filter((bat) => {
         // Morcegos morrendo têm velocidade reduzida
         if (!bat.isDying) {
-          bat.x -= bat.speed;
+          if (!showSettings) {
+            bat.x -= bat.speed;
 
-          // Calcular movimento vertical ondulado para morcegos vivos
-          const waveHeight = 8;
-          const waveFrequency = 0.01;
-          const verticalOffset = Math.sin(bat.x * waveFrequency + bat.waveOffset) * waveHeight * bat.waveFactor;
+            // Calcular movimento vertical ondulado para morcegos vivos
+            const waveHeight = 8;
+            const waveFrequency = 0.01;
+            const verticalOffset = Math.sin(bat.x * waveFrequency + bat.waveOffset) * waveHeight * bat.waveFactor;
 
-          // Update animation frame for living bats
-          if (batFrameTimer > BAT_FRAME_DURATION) {
-            bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
+            // Update animation frame for living bats
+            if (batFrameTimer > BAT_FRAME_DURATION) {
+              bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
+            }
           }
 
           // Draw living bat
@@ -611,6 +692,7 @@ const GameCanvas = () => {
               ctx.save();
 
               const currentFrame = bat.frameIndex % BAT_FRAMES;
+              const verticalOffset = !showSettings ? Math.sin(bat.x * 0.01 + bat.waveOffset) * 8 * bat.waveFactor : 0;
 
               ctx.drawImage(
                 batImages.current[0],
@@ -631,7 +713,7 @@ const GameCanvas = () => {
           return false;
         } else {
           // Animação de morte
-          if (batDieFrameTimer > BAT_DIE_FRAME_DURATION) {
+          if (!showSettings && batDieFrameTimer > BAT_DIE_FRAME_DURATION) {
             bat.deathFrame++;
           }
 
@@ -663,42 +745,23 @@ const GameCanvas = () => {
       // Reset bat animation timer after updating all bats
       if (batFrameTimer > BAT_FRAME_DURATION) {
         batFrameTimer = 0; // Reset the timer
-        // Atualiza todos os frames de uma só vez
-        batEnemies.current.forEach((bat) => {
-          bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
-        });
       }
 
       if (batDieFrameTimer > BAT_DIE_FRAME_DURATION) {
         batDieFrameTimer = 0;
       }
 
-      if (time - lastBatSpawnTime.current > BAT_SPAWN_INTERVAL) {
-        const bat: Bat = {
-          x: width,
-          y: Math.random() * (height / 2) + 50,
-          frameIndex: 0,
-          speed: 3 + Math.random() * 2,
-          width: BAT_FRAME_WIDTH,
-          height: BAT_FRAME_HEIGHT,
-          waveFactor: Math.random() * 0.5 + 0.5,
-          waveOffset: Math.random() * Math.PI * 2,
-          isDying: false, // Inicialmente não está morrendo
-          deathFrame: 0, // Frame inicial da animação de morte
-        };
-        batEnemies.current.push(bat);
-        lastBatSpawnTime.current = time;
-      }
-
       // Draw foreground layers 4-5
       layersRef.current.slice(3).forEach((layer) => {
         if (layer.image.complete) {
           // Move the layer
-          layer.x -= layer.speed;
+          if (!showSettings) {
+            layer.x -= layer.speed;
 
-          // Reset position when image goes off screen
-          if (layer.x <= -width) {
-            layer.x = 0;
+            // Reset position when image goes off screen
+            if (layer.x <= -width) {
+              layer.x = 0;
+            }
           }
 
           // Draw two copies of the image for seamless scrolling
@@ -737,6 +800,9 @@ const GameCanvas = () => {
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText("HEALTH", 15, 95);
 
+      // Desenhar controles do jogo na lateral esquerda
+      drawControls();
+
       // Game Over se a vida chegar a zero
       if (gameState.current.health <= 0) {
         ctx.font = "36px 'Press Start 2P', cursive";
@@ -746,21 +812,34 @@ const GameCanvas = () => {
         ctx.font = "18px 'Press Start 2P', cursive";
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText("Press SPACE to restart", width / 2 - 150, height / 2 + 40);
-
-        // Parar o jogo aqui, ou implementar reinício
-        // cancelAnimationFrame(animationFrameId);
       }
 
       animationFrameId = requestAnimationFrame(draw);
     };
 
     animationFrameId = requestAnimationFrame(draw);
+
+    // Mouse click handler for settings button
+    const handleMouseClick = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Check if settings button was clicked
+      if (mouseX >= width - 50 && mouseX <= width - 10 && mouseY >= 10 && mouseY <= 50) {
+        setShowSettings(!showSettings);
+      }
+    };
+
+    canvas.addEventListener("click", handleMouseClick);
+
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      canvas.removeEventListener("click", handleMouseClick);
     };
-  }, []);
+  }, [showSettings]); // Add showSettings as dependency
 
   // Carregar o high score salvo quando o componente for montado
   useEffect(() => {
@@ -793,6 +872,7 @@ const GameCanvas = () => {
         alignItems: "center",
         height: "50vh",
         width: "100vw",
+        position: "relative",
       }}
     >
       <canvas
@@ -804,6 +884,157 @@ const GameCanvas = () => {
           imageRendering: "pixelated",
         }}
       />
+
+      {/* Settings menu overlay */}
+      {showSettings && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "rgba(0,0,0,0.8)",
+              padding: "20px",
+              border: "3px solid #AAA",
+              width: "400px",
+              color: "white",
+              fontFamily: "'Press Start 2P', cursive",
+              textAlign: "center",
+            }}
+          >
+            <h2 style={{ fontSize: "24px", marginBottom: "30px" }}>SETTINGS</h2>
+
+            <div style={{ marginBottom: "20px", display: "flex", alignItems: "center" }}>
+              <span style={{ width: "180px", textAlign: "left", fontSize: "14px" }}>Music:</span>
+              <button
+                style={{
+                  backgroundColor: "#775511",
+                  color: "white",
+                  border: "2px solid #FFAA22",
+                  margin: "0 5px",
+                  padding: "8px 12px",
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "12px",
+                }}
+              >
+                ON
+              </button>
+              <button
+                style={{
+                  backgroundColor: "#555",
+                  color: "white",
+                  border: "2px solid #888",
+                  margin: "0 5px",
+                  padding: "8px 12px",
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "12px",
+                }}
+              >
+                OFF
+              </button>
+            </div>
+
+            <div style={{ marginBottom: "20px", display: "flex", alignItems: "center" }}>
+              <span style={{ width: "180px", textAlign: "left", fontSize: "14px" }}>Sound Effects:</span>
+              <button
+                style={{
+                  backgroundColor: "#775511",
+                  color: "white",
+                  border: "2px solid #FFAA22",
+                  margin: "0 5px",
+                  padding: "8px 12px",
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "12px",
+                }}
+              >
+                ON
+              </button>
+              <button
+                style={{
+                  backgroundColor: "#555",
+                  color: "white",
+                  border: "2px solid #888",
+                  margin: "0 5px",
+                  padding: "8px 12px",
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "12px",
+                }}
+              >
+                OFF
+              </button>
+            </div>
+
+            <div style={{ marginBottom: "20px", display: "flex", alignItems: "center" }}>
+              <span style={{ width: "180px", textAlign: "left", fontSize: "14px" }}>Difficulty:</span>
+              <button
+                style={{
+                  backgroundColor: "#555",
+                  color: "white",
+                  border: "2px solid #888",
+                  margin: "0 5px",
+                  padding: "8px 12px",
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "12px",
+                }}
+              >
+                Easy
+              </button>
+              <button
+                style={{
+                  backgroundColor: "#775511",
+                  color: "white",
+                  border: "2px solid #FFAA22",
+                  margin: "0 5px",
+                  padding: "8px 12px",
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "12px",
+                }}
+              >
+                Normal
+              </button>
+              <button
+                style={{
+                  backgroundColor: "#555",
+                  color: "white",
+                  border: "2px solid #888",
+                  margin: "0 5px",
+                  padding: "8px 12px",
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "12px",
+                }}
+              >
+                Hard
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowSettings(false)}
+              style={{
+                display: "block",
+                width: "140px",
+                margin: "30px auto 0",
+                padding: "10px",
+                backgroundColor: "#555",
+                color: "white",
+                border: "2px solid white",
+                fontFamily: "'Press Start 2P', cursive",
+                fontSize: "16px",
+                cursor: "pointer",
+              }}
+            >
+              BACK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
