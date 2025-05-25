@@ -1,4 +1,5 @@
 import GameCanvas from "./components/GameCanvasWithControls";
+import "./App.css";
 
 function App() {
   return (
