@@ -1,8 +1,20 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* Previne scroll horizontal */
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem; /* Reduzindo o padding */
   text-align: center;
+  overflow-x: hidden; /* Previne scroll horizontal */
 }
 
 .logo {
@@ -174,4 +186,12 @@
   font-family: "Press Start 2P", cursive;
   font-size: 16px;
   cursor: pointer;
+}
+
+/* ===== Canvas Styles ===== */
+canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
 }

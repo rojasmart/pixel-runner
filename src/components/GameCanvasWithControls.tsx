@@ -860,9 +860,10 @@ const GameCanvas = () => {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: "50vh",
-        width: "100vw",
+        height: "60vh",
+        width: "100%", // Mudando de 100vw para 100%
         position: "relative",
+        overflow: "hidden", // Garantir que nada ultrapasse
       }}
     >
       <canvas
@@ -872,6 +873,8 @@ const GameCanvas = () => {
         style={{
           border: "2px solid #000",
           imageRendering: "pixelated",
+          maxWidth: "100%", // Garantir que o canvas não ultrapasse a largura do container
+          height: "auto", // Manter a proporção de aspecto
         }}
       />
 
