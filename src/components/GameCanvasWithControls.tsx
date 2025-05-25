@@ -673,26 +673,18 @@ const GameCanvas = () => {
           if (!showSettings) {
             bat.x -= bat.speed;
 
-            // Calcular movimento vertical ondulado para morcegos vivos
-            const waveHeight = 8;
-            const waveFrequency = 0.01;
-            const verticalOffset = Math.sin(bat.x * waveFrequency + bat.waveOffset) * waveHeight * bat.waveFactor;
-
             // Update animation frame for living bats
             if (batFrameTimer > BAT_FRAME_DURATION) {
               bat.frameIndex = (bat.frameIndex + 1) % BAT_FRAMES;
             }
           }
 
-          // Draw living bat
+          const currentFrame = bat.frameIndex % BAT_FRAMES;
+          const verticalOffset = !showSettings ? Math.sin(bat.x * 0.01 + bat.waveOffset) * 8 * bat.waveFactor : 0;
+
           if (bat.x > -BAT_DISPLAY_WIDTH) {
             if (batImages.current[0]?.complete) {
-              // Draw the bat with the correct frame
               ctx.save();
-
-              const currentFrame = bat.frameIndex % BAT_FRAMES;
-              const verticalOffset = !showSettings ? Math.sin(bat.x * 0.01 + bat.waveOffset) * 8 * bat.waveFactor : 0;
-
               ctx.drawImage(
                 batImages.current[0],
                 currentFrame * BAT_FRAME_WIDTH,
@@ -704,7 +696,6 @@ const GameCanvas = () => {
                 BAT_DISPLAY_WIDTH,
                 BAT_DISPLAY_HEIGHT
               );
-
               ctx.restore();
             }
             return true;
